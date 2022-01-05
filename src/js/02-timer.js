@@ -1,19 +1,17 @@
 import flatpickr from 'flatpickr';
+import Notiflix from 'notiflix';
 import 'flatpickr/dist/flatpickr.min.css';
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
+const currentTime = Date.now();
+const startBtn = document.querySelector('button');
+const dateDays = document.querySelector('span[data-days]');
+const dateHours = document.querySelector('span[data-hours]');
+const dateMinutes = document.querySelector('span[data-minutes]');
+const dateSeconds = document.querySelector('span[data-seconds]');
 
-const input = document.querySelector('#datetime-picker');
-const startBtn = document.querySelector('button[data-start]');
+let endDate = 0;
+let ms = 0;
+
 startBtn.disabled = true;
-
-const dataDays = document.querySelector('span[data-days]');
-const dataHours = document.querySelector('span[data-hours]');
-const dataMinutes = document.querySelector('span[data-minutes]');
-const dataSeconds = document.querySelector('span[data-seconds]');
-
-const currentDate = Date.now();
-
-let selectedDate;
 
 const options = {
   enableTime: true,
@@ -21,63 +19,62 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    onChooseDate();
+    console.log(datePicker);
+    const selectedDate = selectedDates[0].getTime();
+    if (Date.now() > selectedDate) {
+      startBtn.disabled = true;
+      Notiflix.Notify.failure('Please choose a date in the future');
+      console.log('Wrong date!');
+      return;
+    } else {
+      startBtn.disabled = false;
+
+      endDate = selectedDates[0];
+    }
   },
 };
 
-flatpickr(input, options);
+const datePicker = flatpickr('#datetime-picker', options);
 
-startBtn.addEventListener(`click`, onStartClick);
+startBtn.addEventListener('click', onStartBtnClick);
 
-function onStartClick() {
-  startBtn.disabled = true;
-  input.disabled = true;
+function onStartBtnClick() {
+  let intervalId = null;
 
-  let timerId = setInterval(() => {
-    selectedDate = new Date(input.value).getTime();
-    const currentDate = Date.now();
-    const restOfTime = selectedDate - currentDate;
-    const countdownTime = convertMs(restOfTime);
+  intervalId = setInterval(() => {
+    const timeToStart = Date.now();
+    ms = endDate - timeToStart;
 
-    dataDays.textContent = addLeadingZero(countdownTime.days);
-    dataHours.textContent = addLeadingZero(countdownTime.hours);
-    dataMinutes.textContent = addLeadingZero(countdownTime.minutes);
-    dataSeconds.textContent = addLeadingZero(countdownTime.seconds);
+    if (ms > 0) {
+      console.log(ms);
+      ms -= 1;
 
-    if (restOfTime < 1000) {
-      clearInterval(timerId);
+      let timeComponents = convertMs(ms);
+      console.log(timeComponents);
+      dateDays.innerHTML = timeComponents.days;
+      dateHours.innerHTML = timeComponents.hours;
+      dateMinutes.innerHTML = timeComponents.minutes;
+      dateSeconds.innerHTML = timeComponents.seconds;
     }
   }, 1000);
+
+  console.log('It starts!');
 }
 
-function onChooseDate() {
-  selectedDate = new Date(input.value).getTime();
-  if (selectedDate < currentDate) {
-    startBtn.disabled = true;
-    return Notify.failure('Please choose a date in the future');
-  }
-  startBtn.disabled = false;
+function addLeadingZero(value) {
+  return String(value).padStart(2, '0');
 }
 
 function convertMs(ms) {
-  // Number of milliseconds per unit of time
   const second = 1000;
   const minute = second * 60;
   const hour = minute * 60;
   const day = hour * 24;
 
-  // Remaining days
-  const days = Math.floor(ms / day);
-  // Remaining hours
-  const hours = Math.floor((ms % day) / hour);
-  // Remaining minutes
-  const minutes = Math.floor(((ms % day) % hour) / minute);
-  // Remaining seconds
-  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
+  const days = addLeadingZero(Math.floor(ms / day));
+  const hours = addLeadingZero(Math.floor((ms % day) / hour));
+  const minutes = addLeadingZero(Math.floor(((ms % day) % hour) / minute));
+  const seconds = addLeadingZero(Math.floor((((ms % day) % hour) % minute) / second));
 
   return { days, hours, minutes, seconds };
-}
-
-function addLeadingZero(value) {
-  return String(value).padStart(2, `0`);
 }
